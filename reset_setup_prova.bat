@@ -21,20 +21,33 @@ taskkill /f /im idea.exe   >nul 2>&1
 taskkill /f /im Code.exe   >nul 2>&1
 timeout /t 2 >nul
 
-:: DOCUMENTS
-echo Resetando Documents...
-if exist "%DOCS%" rd /s /q "%DOCS%"
-mkdir "%DOCS%"
+:: Caminho real de Documents/Downloads (pode estar redirecionado p/ OneDrive ou outro disco)
+for /f "usebackq delims=" %%P in (`PowerShell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')"`) do if /i "%USERNAME%"=="aluno" set "DOCS=%%P"
+for /f "usebackq delims=" %%P in (`PowerShell -NoProfile -Command "(New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path"`) do if /i "%USERNAME%"=="aluno" set "DOWNLOADS=%%P"
 
-:: DOWNLOADS
-echo Resetando Downloads...
-if exist "%DOWNLOADS%" rd /s /q "%DOWNLOADS%"
-mkdir "%DOWNLOADS%"
+:: Programas que costumam travar arquivos nessas pastas
+taskkill /f /im java.exe  >nul 2>&1
+taskkill /f /im javaw.exe >nul 2>&1
+timeout /t 1 >nul
 
-:: IDEAPROJECTS
+:: Limpa o CONTEUDO (nao apaga a pasta especial). robocopy /MIR de pasta vazia
+:: apaga caminhos > 260 chars e arquivos ocultos/sistema/somente-leitura, onde rd falha.
+set "VAZIO=%TEMP%\reset_vazio"
+mkdir "%VAZIO%" 2>nul
+
+echo Resetando Documents (%DOCS%)...
+mkdir "%DOCS%" 2>nul
+robocopy "%VAZIO%" "%DOCS%" /MIR /XJ /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+
+echo Resetando Downloads (%DOWNLOADS%)...
+mkdir "%DOWNLOADS%" 2>nul
+robocopy "%VAZIO%" "%DOWNLOADS%" /MIR /XJ /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+
 echo Resetando IdeaProjects...
-if exist "%IDEA%" rd /s /q "%IDEA%"
-mkdir "%IDEA%"
+mkdir "%IDEA%" 2>nul
+robocopy "%VAZIO%" "%IDEA%" /MIR /XJ /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+
+rd "%VAZIO%" 2>nul
 
 :: INTELLIJ - REMOVER PLUGINS/EXTENSOES
 echo Removendo plugins do IntelliJ...
@@ -87,4 +100,4 @@ if exist "%USB%%ITEM%\*" (
 
 echo.
 echo CONCLUIDO
-pause
+pause
